@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Designer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Book Designer</h1>
+            <button id="reset-project" class="action-button header-button">Reset Progetto</button>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="preview-section">
+            <div class="preview-container" id="preview3D">
+                <div class="parallelepiped book-stack">
+                    <div class="dimension-label width">Larghezza</div>
+                    <div class="dimension-label height">Altezza</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="data-section">
+            <div class="data-panel">
+                <h2>Dati Progetto</h2>
+                <hr class="divider">
+
+                <div class="form-group">
+                    <label for="tecnica-stampa">Tecnica di stampa</label>
+                    <select id="tecnica-stampa" name="tecnica-stampa">
+                        <option value="offset">Offset</option>
+                        <option value="digitale">Digitale</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="foglio-macchina">Foglio macchina / Formato stampa</label>
+                    <select id="foglio-macchina" name="foglio-macchina">
+                        <option value="70x100" data-tecnica="offset">70 × 100 cm</option>
+                        <option value="64x88" data-tecnica="offset">64 × 88 cm</option>
+                        <option value="33x48_3" data-tecnica="digitale">33 × 48,3 cm</option>
+                        <option value="a4" data-tecnica="digitale">A4 (210 × 297 mm)</option>
+                        <option value="a3" data-tecnica="digitale">A3 (297 × 420 mm)</option>
+                        <option value="super_a3" data-tecnica="digitale">Super A3 (32 × 45 cm)</option>
+                        <option value="banner_33x100" data-tecnica="digitale">Banner (33 × 100 cm)</option>
+                    </select>
+                </div>
+
+                <hr class="divider">
+
+                <div id="ottimizzazione-container" class="form-group" style="display: none;">
+                    <label>Suggerimento ottimizzazione</label>
+                    <div id="suggerimento-ottimizzato" class="suggestion-box">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="formato">Formato (Chiuso)</label>
+                    <select id="formato" name="formato">
+                        <option value="A4">A4 (210 × 297 mm)</option>
+                        <option value="A5">A5 (148 × 210 mm)</option>
+                        <option value="B5">B5 (176 × 250 mm)</option>
+                        <option value="17x24">17 × 24 cm</option>
+                        <option value="15x21">15 × 21 cm</option>
+                        <option value="16x23">16 × 23 cm</option>
+                        <option value="custom">Personalizzato</option>
+                    </select>
+                </div>
+
+                <div id="custom-inputs" class="custom-inputs">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Larghezza (mm)</label>
+                            <input type="number" id="custom-width" value="210" min="50" max="420">
+                            <span id="width-error" class="error-message">Max 420mm</span>
+                        </div>
+                        <button id="swap-dimensions" class="swap-button" type="button" title="Inverti dimensioni">
+                            ↔
+                        </button>
+                        <div class="form-group">
+                            <label>Altezza (mm)</label>
+                            <input type="number" id="custom-height" value="297" min="50" max="420">
+                            <span id="height-error" class="error-message">Max 420mm</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="divider-dashed">
+
+                <div class="form-group">
+                    <label>Formato Aperto (mm)</label>
+                    <div id="formato-aperto" class="info-value">420 × 297 mm</div>
+                    <div id="foglio-warning" class="warning-message"></div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="form-group">
+                    <label for="numero-pagine">Numero pagine</label>
+                    <input type="number" id="numero-pagine" name="numero-pagine" min="4" step="2" value="100">
+                    <div id="pagine-warning" class="warning-message"></div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="form-group">
+                    <label>Segnature stampabili</label>
+                    <div id="segnature-list" class="signatures-container">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <div id="custom-signatures-section" class="form-group">
+                    <label>Configurazione Segnature</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carta-tipo">Tipo carta</label>
+                            <select id="carta-tipo" name="carta-tipo">
+                                <option value="patinata_lucida">Patinata Lucida</option>
+                                <option value="patinata_opaca" selected>Patinata Opaca</option>
+                                <option value="usomano">Usomano</option>
+                                <option value="edizioni">Edizioni / Avoriata</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carta-grammatura">Grammatura (g/m²)</label>
+                            <input
+                                type="number"
+                                id="carta-grammatura"
+                                name="carta-grammatura"
+                                list="grammatura-options"
+                                min="60"
+                                max="400"
+                                step="5"
+                                value="100"
+                            >
+                            <datalist id="grammatura-options">
+                                <option value="80"></option>
+                                <option value="90"></option>
+                                <option value="100"></option>
+                                <option value="115"></option>
+                                <option value="130"></option>
+                                <option value="150"></option>
+                                <option value="170"></option>
+                                <option value="200"></option>
+                                <option value="250"></option>
+                                <option value="300"></option>
+                            </datalist>
+                        </div>
+                    </div>
+                    <div id="signatures-config-list" class="signatures-config-list">
+                        <!-- Popolato via JS -->
+                    </div>
+                    <div class="signature-actions">
+                        <button id="add-signature-btn" class="action-button">+ Aggiungi Segnatura</button>
+                        <button id="auto-signatures-btn" class="action-button">Auto Segnature</button>
+                    </div>
+                    <div id="pagine-residue" class="pagine-residue"></div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="form-group">
+                    <label>Dorso stimato</label>
+                    <div id="spine-display" class="spine-display">0.0 mm</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Calcolo lastre</label>
+                    <div id="plates-display" class="plates-display"></div>
+                </div>
+
+                <hr class="divider">
+            </div>
+        </div>
+    </main>
+    
+    <script src="script.js"></script>
+</body>
+</html>
