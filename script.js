@@ -1,7 +1,9 @@
 // Book Designer - Script principale
 
 document.addEventListener('DOMContentLoaded', function() {
+    const nomeProgettoInput = document.getElementById('nome-progetto');
     const formatoSelect = document.getElementById('formato');
+    const orientamentoSelect = document.getElementById('orientamento');
     const tecnicaSelect = document.getElementById('tecnica-stampa');
     const foglioSelect = document.getElementById('foglio-macchina');
     const formatoApertoDisplay = document.getElementById('formato-aperto');
@@ -17,17 +19,353 @@ document.addEventListener('DOMContentLoaded', function() {
     const segnatureList = document.getElementById('segnature-list');
     const spineDisplay = document.getElementById('spine-display');
     const platesDisplay = document.getElementById('plates-display');
+    const platesGroup = document.getElementById('plates-group');
     const ottimizzazioneContainer = document.getElementById('ottimizzazione-container');
     const suggerimentoOttimizzato = document.getElementById('suggerimento-ottimizzato');
     const signaturesConfigList = document.getElementById('signatures-config-list');
     const addSignatureBtn = document.getElementById('add-signature-btn');
     const autoSignaturesBtn = document.getElementById('auto-signatures-btn');
+    const resetSignaturesBtn = document.getElementById('reset-signatures-btn');
     const pagineResidueDisplay = document.getElementById('pagine-residue');
     const cartaTipoSelect = document.getElementById('carta-tipo');
     const cartaGrammaturaSelect = document.getElementById('carta-grammatura');
     const resetProjectBtn = document.getElementById('reset-project');
+    const toggleViewBtn = document.getElementById('toggle-view-btn');
+    const mobileTabDataBtn = document.getElementById('mobile-tab-data');
+    const mobileTabImpositionBtn = document.getElementById('mobile-tab-imposition');
+    const mobileTab3DBtn = document.getElementById('mobile-tab-3d');
+    const previewSection = document.querySelector('.preview-section');
+    const dataSection = document.querySelector('.data-section');
+    const preview3D = document.getElementById('preview3D');
+    const impositionView = document.getElementById('imposition-view');
+    const tiraturaInput = document.getElementById('tiratura');
+    const fogliMacchinaDisplay = document.getElementById('fogli-macchina-display');
+    let currentView = '3d'; // '3d' o 'imposition'
 
     let segnatureConfigurate = [];
+    function updateImpositionView() {
+        if (!impositionView) return;
+        impositionView.innerHTML = '';
+
+        if (segnatureConfigurate.length === 0) {
+            impositionView.innerHTML = '<div class="imposition-title">Nessuna segnatura inserita</div>';
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'imposition-sheet';
+
+        let pageStart = 1;
+
+        segnatureConfigurate.forEach((sig, index) => {
+            const type = sig.pagine;
+            const variante = sig.variante || null;
+            const pattern = getImpositionPattern(type, variante);
+
+            if (!pattern) {
+                const section = document.createElement('div');
+                section.className = 'imposition-section';
+                section.dataset.type = type;
+
+                const title = document.createElement('div');
+                title.className = 'imposition-title';
+                title.textContent = `Segnatura ${index + 1} (${type}°) - Schema non disponibile`;
+                section.appendChild(title);
+                container.appendChild(section);
+                pageStart += type || 0;
+                return;
+            }
+
+            const { cols, rows, bianca, volta, label } = pattern;
+            const offset = pageStart - 1;
+            const rangeEnd = pageStart + type - 1;
+
+            const biancaGrid = applyPageOffset(bianca, offset);
+            const voltaGrid = applyPageOffset(volta, offset);
+
+            const section = document.createElement('div');
+            section.className = 'imposition-section';
+            section.dataset.type = type;
+
+            const title = document.createElement('div');
+            title.className = 'imposition-title';
+            title.textContent = `${label} — Segnatura ${index + 1} (${pageStart}–${rangeEnd})`;
+            section.appendChild(title);
+
+            const pair = document.createElement('div');
+            pair.className = 'imposition-pair';
+
+            const biancaSide = createImpositionSide('Bianca', biancaGrid, cols, rows, type, pattern.cssClass);
+            pair.appendChild(biancaSide);
+
+            const voltaSide = createImpositionSide('Volta', voltaGrid, cols, rows, type, pattern.cssClass);
+            pair.appendChild(voltaSide);
+
+            section.appendChild(pair);
+            container.appendChild(section);
+
+            pageStart += type;
+        });
+
+        impositionView.appendChild(container);
+    }
+
+    function getImpositionPattern(type, variante) {
+        if (type === 4) {
+            return {
+                label: 'Quartino (4°)',
+                cols: 2,
+                rows: 1,
+                bianca: [{ n: 4, r: false }, { n: 1, r: false }],
+                volta: [{ n: 2, r: false }, { n: 3, r: false }]
+            };
+        }
+        if (type === 8) {
+            if (variante === 'finestra') {
+                return {
+                    label: 'Ottavo a finestra (8°)',
+                    cols: 4,
+                    rows: 1,
+                    cssClass: 'imposition-grid-8-finestra',
+                    bianca: [{ n: 7, r: false }, { n: 8, r: false }, { n: 1, r: false }, { n: 2, r: false }],
+                    volta: [{ n: 3, r: false }, { n: 4, r: false }, { n: 5, r: false }, { n: 6, r: false }]
+                };
+            }
+            return {
+                label: 'Ottavo (8°)',
+                cols: 2,
+                rows: 2,
+                bianca: [
+                    { n: 8, r: false }, { n: 5, r: false },
+                    { n: 1, r: false }, { n: 4, r: false }
+                ],
+                volta: [
+                    { n: 6, r: false }, { n: 7, r: false },
+                    { n: 3, r: false }, { n: 2, r: false }
+                ]
+            };
+        }
+        if (type === 12) {
+            return {
+                label: 'Dodicesimo (12°)',
+                cols: 3,
+                rows: 2,
+                bianca: [
+                    { n: 11, r: false, b: 'right' }, { n: 10, r: false, b: 'left' }, { n: 7, r: false, b: 'right' },
+                    { n: 2, r: false, b: 'right' }, { n: 3, r: false, b: 'left' }, { n: 9, r: false, b: 'right' }
+                ],
+                volta: [
+                    { n: 8, r: false, b: 'left' }, { n: 6, r: false, b: 'right' }, { n: 12, r: false, b: 'left' },
+                    { n: 5, r: false, b: 'left' }, { n: 4, r: false, b: 'right' }, { n: 1, r: false, b: 'left' }
+                ]
+            };
+        }
+        if (type === 16) {
+            return {
+                label: 'Sedicesimo (16°)',
+                cols: 4,
+                rows: 2,
+                bianca: [
+                    { n: 5, r: true }, { n: 12, r: true }, { n: 9, r: true }, { n: 8, r: true },
+                    { n: 4, r: false }, { n: 13, r: false }, { n: 16, r: false }, { n: 1, r: false }
+                ],
+                volta: [
+                    { n: 7, r: true }, { n: 10, r: true }, { n: 11, r: true }, { n: 6, r: true },
+                    { n: 2, r: false }, { n: 15, r: false }, { n: 14, r: false }, { n: 3, r: false }
+                ]
+            };
+        }
+        if (type === 32) {
+            return {
+                label: 'Trentaduesimo (32°)',
+                cols: 4,
+                rows: 4,
+                bianca: [
+                    { n: 12, r: true }, { n: 5, r: true }, { n: 8, r: true }, { n: 9, r: true },
+                    { n: 21, r: false }, { n: 28, r: false }, { n: 25, r: false }, { n: 24, r: false },
+                    { n: 20, r: false }, { n: 29, r: false }, { n: 32, r: false }, { n: 17, r: false },
+                    { n: 13, r: false }, { n: 4, r: false }, { n: 1, r: false }, { n: 16, r: false }
+                ],
+                volta: [
+                    { n: 10, r: true }, { n: 7, r: true }, { n: 6, r: true }, { n: 11, r: true },
+                    { n: 23, r: false }, { n: 22, r: false }, { n: 27, r: false }, { n: 26, r: false },
+                    { n: 18, r: false }, { n: 31, r: false }, { n: 30, r: false }, { n: 19, r: false },
+                    { n: 15, r: false }, { n: 2, r: false }, { n: 3, r: false }, { n: 14, r: false }
+                ]
+            };
+        }
+        return null;
+    }
+
+    function applyPageOffset(grid, offset) {
+        return grid.map(cell => {
+            if (cell.n === '?' || cell.n == null) {
+                return { ...cell };
+            }
+            return { ...cell, n: cell.n + offset };
+        });
+    }
+
+    function createImpositionSide(label, grid, cols, rows, type, extraGridClass) {
+        const side = document.createElement('div');
+        side.className = 'imposition-side';
+
+        const sideLabel = document.createElement('div');
+        sideLabel.className = 'side-label';
+        sideLabel.textContent = label;
+        side.appendChild(sideLabel);
+
+        const gridEl = document.createElement('div');
+        gridEl.className = 'imposition-grid';
+        if (extraGridClass) {
+            gridEl.classList.add(extraGridClass);
+        }
+        if (type === 4) {
+            gridEl.classList.add('imposition-grid-4');
+        }
+        if (type === 8) {
+            gridEl.classList.add('imposition-grid-8');
+        }
+        if (type === 12) {
+            gridEl.classList.add('imposition-grid-12');
+        }
+        if (type === 16) {
+            gridEl.classList.add('imposition-grid-16');
+        }
+        if (type === 32) {
+            gridEl.classList.add('imposition-grid-32');
+        }
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+        grid.forEach((cell, index) => {
+            const cellEl = document.createElement('div');
+            cellEl.className = `imposition-cell ${cell.r ? 'rotated' : ''}`;
+            if (type === 8 && extraGridClass !== 'imposition-grid-8-finestra') {
+                const colIndex = index % cols;
+                cellEl.classList.add(colIndex % 2 === 0 ? 'base-left' : 'base-right');
+            }
+            if (type === 12) {
+                const base = cell.b === 'left' || cell.b === 'right'
+                    ? cell.b
+                    : ((index % cols) % 2 === 0 ? 'left' : 'right');
+                cellEl.classList.add(base === 'left' ? 'base-left' : 'base-right');
+            }
+            if (type === 32) {
+                const colIndex = index % cols;
+                const shouldBeLeft = colIndex % 2 === 0;
+                const useLeftClass = cell.r ? !shouldBeLeft : shouldBeLeft;
+                cellEl.classList.add(useLeftClass ? 'base-left' : 'base-right');
+            }
+            const num = document.createElement('span');
+            num.className = 'page-num';
+            num.textContent = cell.n;
+            cellEl.appendChild(num);
+            gridEl.appendChild(cellEl);
+        });
+
+        side.appendChild(gridEl);
+        return side;
+    }
+
+    function isMobileView() {
+        return window.matchMedia('(max-width: 768px)').matches;
+    }
+
+    function setPreviewView(view) {
+        currentView = view;
+        if (currentView === 'imposition') {
+            if (preview3D) {
+                preview3D.style.display = 'none';
+            }
+            if (impositionView) {
+                impositionView.style.display = 'flex';
+            }
+            if (toggleViewBtn) {
+                toggleViewBtn.textContent = 'Visualizza 3D';
+            }
+            updateImpositionView();
+        } else {
+            if (preview3D) {
+                preview3D.style.display = 'block';
+            }
+            if (impositionView) {
+                impositionView.style.display = 'none';
+            }
+            if (toggleViewBtn) {
+                toggleViewBtn.textContent = 'Visualizza Imposizione';
+            }
+        }
+    }
+
+    function setMobileTab(tab) {
+        document.body.classList.remove('mobile-view-data', 'mobile-view-imposition', 'mobile-view-3d');
+        document.body.classList.add(`mobile-view-${tab}`);
+
+        if (mobileTabDataBtn) {
+            mobileTabDataBtn.classList.toggle('active', tab === 'data');
+        }
+        if (mobileTabImpositionBtn) {
+            mobileTabImpositionBtn.classList.toggle('active', tab === 'imposition');
+        }
+        if (mobileTab3DBtn) {
+            mobileTab3DBtn.classList.toggle('active', tab === '3d');
+        }
+
+        if (tab === 'imposition') {
+            setPreviewView('imposition');
+        } else if (tab === '3d') {
+            setPreviewView('3d');
+        }
+
+        if (tab === 'data' && dataSection && isMobileView()) {
+            dataSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        if ((tab === 'imposition' || tab === '3d') && previewSection && isMobileView()) {
+            previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    if (toggleViewBtn) {
+        toggleViewBtn.addEventListener('click', function() {
+            setPreviewView(currentView === '3d' ? 'imposition' : '3d');
+        });
+    }
+
+    if (mobileTabDataBtn) {
+        mobileTabDataBtn.addEventListener('click', function() {
+            setMobileTab('data');
+        });
+    }
+
+    if (mobileTabImpositionBtn) {
+        mobileTabImpositionBtn.addEventListener('click', function() {
+            setMobileTab('imposition');
+        });
+    }
+    if (mobileTab3DBtn) {
+        mobileTab3DBtn.addEventListener('click', function() {
+            setMobileTab('3d');
+        });
+    }
+
+    if (isMobileView()) {
+        setMobileTab('data');
+    }
+
+    window.addEventListener('resize', () => {
+        if (isMobileView()) {
+            if (
+                !document.body.classList.contains('mobile-view-data') &&
+                !document.body.classList.contains('mobile-view-imposition') &&
+                !document.body.classList.contains('mobile-view-3d')
+            ) {
+                setMobileTab('data');
+            }
+            return;
+        }
+        document.body.classList.remove('mobile-view-data', 'mobile-view-imposition', 'mobile-view-3d');
+    });
     let availableSignatureTypes = new Set();
     const PAPER_THICKNESS = {
         patinata_lucida: {
@@ -71,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!parallelepiped) {
             return;
         }
-        parallelepiped.style.transform = `rotateX(${rotationX}deg) rotateY(${rotationY}deg) scale(${zoom})`;
+        parallelepiped.style.transform = `translate(-50%, -50%) rotateX(${rotationX}deg) rotateY(${rotationY}deg) scale(${zoom})`;
     }
 
     const dimensioniPreset = {
@@ -80,7 +418,9 @@ document.addEventListener('DOMContentLoaded', function() {
         'B5': { width: 176, height: 250, depth: 25 },
         '17x24': { width: 170, height: 240, depth: 25 },
         '15x21': { width: 150, height: 210, depth: 20 },
-        '16x23': { width: 160, height: 230, depth: 20 }
+        '16x23': { width: 160, height: 230, depth: 20 },
+        '28x28': { width: 280, height: 280, depth: 25 },
+        '30x30': { width: 300, height: 300, depth: 25 }
     };
 
     const LIMITS = {
@@ -116,7 +456,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     function updateSegnature(openWidth, openHeight, sheet) {
-        const types = [4, 8, 16, 32];
+        const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
+        const types = isQuadrotto ? [12, 24] : [4, 8, 16, 32];
         segnatureList.innerHTML = '';
         availableSignatureTypes = new Set();
         
@@ -128,15 +469,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // Verifica semplificata di imposizione
             // 4 pag = 1 foglio aperto (fronte/retro) -> servono 1 aperti per lato
             // 8 pag = 2 fogli aperti -> servono 2 aperti per lato
+            // 12 pag = 3 fogli aperti -> servono 3 aperti per lato
             // 16 pag = 4 fogli aperti -> servono 4 aperti per lato
+            // 24 pag = 6 fogli aperti -> servono 6 aperti per lato
             // 32 pag = 8 fogli aperti -> servono 8 aperti per lato
             const numApertiPerLato = type / 4;
 
-            // Possibili griglie per numApertiPerLato (es. per 4 aperti: 2x2, 4x1)
+            // Possibili griglie per numApertiPerLato
             const grids = {
                 1: [[1, 1]],
                 2: [[2, 1], [1, 2]],
+                3: [[3, 1], [1, 3]],
                 4: [[2, 2], [4, 1], [1, 4]],
+                6: [[3, 2], [2, 3], [6, 1], [1, 6]],
                 8: [[4, 2], [2, 4], [8, 1], [1, 8]]
             };
 
@@ -191,26 +536,60 @@ document.addEventListener('DOMContentLoaded', function() {
     function checkIfMatchesPreset() {
         const w = parseInt(customWidth.value) || 0;
         const h = parseInt(customHeight.value) || 0;
+        const minVal = Math.min(w, h);
+        const maxVal = Math.max(w, h);
         
         for (const [key, preset] of Object.entries(dimensioniPreset)) {
-            if (preset.width === w && preset.height === h) {
+            const pMin = Math.min(preset.width, preset.height);
+            const pMax = Math.max(preset.width, preset.height);
+            if (pMin === minVal && pMax === maxVal) {
                 return key;
             }
         }
         return null;
     }
 
+    function updateFormaFromDimensions() {
+        if (!orientamentoSelect) return;
+        
+        const w = parseInt(customWidth.value) || 0;
+        const h = parseInt(customHeight.value) || 0;
+        
+        if (w === 0 || h === 0) return;
+        
+        let newForma = '';
+        if (w === h) {
+            newForma = 'quadrotto';
+        } else {
+            newForma = 'rettangolare';
+        }
+
+        if (orientamentoSelect.value !== newForma) {
+            orientamentoSelect.value = newForma;
+            updateFormatoOptions();
+        }
+    }
+
     function swapDimensions() {
-        const temp = customWidth.value;
-        customWidth.value = customHeight.value;
-        customHeight.value = temp;
+        const w = customWidth.value;
+        const h = customHeight.value;
+        
+        isUpdatingFromPreset = true;
+        customWidth.value = h;
+        customHeight.value = w;
+        
+        // Forza l'aggiornamento della forma in base alle nuove dimensioni
+        updateFormaFromDimensions();
         
         // Dopo l'inversione, controlla se corrisponde ancora a un preset
         const matchingPreset = checkIfMatchesPreset();
         if (!matchingPreset) {
             formatoSelect.value = 'custom';
+        } else {
+            formatoSelect.value = matchingPreset;
         }
         
+        isUpdatingFromPreset = false;
         updatePreview();
     }
 
@@ -221,8 +600,19 @@ document.addEventListener('DOMContentLoaded', function() {
         pagineWarning.classList.remove('warning-red');
         numeroPagineInput.style.borderColor = '#000000';
 
+        if (!numeroPagineInput.value || numeroPagineInput.value.trim() === '') {
+            return false;
+        }
+
         if (!raw || raw < 4) {
             pagineWarning.textContent = 'Il numero minimo di pagine è 4.';
+            pagineWarning.classList.add('warning-red');
+            numeroPagineInput.style.borderColor = '#d8000c';
+            return false;
+        }
+
+        if (raw > 1000) {
+            pagineWarning.textContent = 'Il numero massimo di pagine è 1000.';
             pagineWarning.classList.add('warning-red');
             numeroPagineInput.style.borderColor = '#d8000c';
             return false;
@@ -244,18 +634,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
         Array.from(foglioSelect.options).forEach(option => {
             const tech = option.dataset.tecnica;
-            const visible = tech === tecnica;
-            option.hidden = !visible;
+            // Se tecnica è vuoto, nascondi tutte le opzioni tranne quella vuota
+            if (!tecnica) {
+                option.hidden = option.value !== '';
+            } else {
+                const visible = tech === tecnica;
+                option.hidden = !visible;
 
-            if (visible && !firstVisibleValue) {
-                firstVisibleValue = option.value;
+                if (visible && !firstVisibleValue) {
+                    firstVisibleValue = option.value;
+                }
             }
         });
 
-        // Se l'opzione selezionata non è più valida, passa alla prima visibile
+        // Se l'opzione selezionata non è più valida, passa alla prima visibile o vuota
         const currentOption = foglioSelect.options[foglioSelect.selectedIndex];
         if (!currentOption || currentOption.hidden) {
             foglioSelect.value = firstVisibleValue || '';
+        }
+    }
+
+    function updateFormatoOptions() {
+        const orientamento = orientamentoSelect ? orientamentoSelect.value : '';
+        const isQuadrotto = orientamento === 'quadrotto';
+        
+        Array.from(formatoSelect.options).forEach(option => {
+            if (option.value === '') {
+                // Mantieni sempre visibile l'opzione vuota
+                option.hidden = false;
+                return;
+            }
+            
+            if (option.value === 'custom') {
+                // Personalizzato sempre visibile
+                option.hidden = false;
+                return;
+            }
+            
+            // Se è quadrotto, mostra solo 28x28 e 30x30
+            if (isQuadrotto) {
+                option.hidden = option.value !== '28x28' && option.value !== '30x30';
+            } else {
+                // Se non è quadrotto, mostra tutti i formati tranne quelli quadrotto
+                option.hidden = option.value === '28x28' || option.value === '30x30';
+            }
+        });
+        
+        // Se l'opzione selezionata non è più valida, resetta
+        const currentOption = formatoSelect.options[formatoSelect.selectedIndex];
+        if (currentOption && currentOption.hidden) {
+            formatoSelect.value = '';
         }
     }
 
@@ -293,6 +721,30 @@ document.addEventListener('DOMContentLoaded', function() {
         )).join('');
     }
 
+    function normalizePantoneEntry(entry) {
+        if (typeof entry === 'string') {
+            const name = entry.trim();
+            if (!name) {
+                return null;
+            }
+            return { name, color: '#000000' };
+        }
+
+        if (entry && typeof entry === 'object') {
+            const rawName = typeof entry.name === 'string' ? entry.name : '';
+            const name = rawName.trim();
+            if (!name) {
+                return null;
+            }
+            const color = typeof entry.color === 'string' && entry.color.trim()
+                ? entry.color.trim()
+                : '#000000';
+            return { name, color };
+        }
+
+        return null;
+    }
+
     function ensureSignatureColors(sig) {
         if (!sig.colors) {
             sig.colors = { c: true, m: true, y: true, k: true, pantone: [] };
@@ -300,6 +752,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!Array.isArray(sig.colors.pantone)) {
             sig.colors.pantone = [];
         }
+        sig.colors.pantone = sig.colors.pantone
+            .map(normalizePantoneEntry)
+            .filter(Boolean);
     }
 
     function buildColorControls(sig, index) {
@@ -309,9 +764,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         ensureSignatureColors(sig);
         const colors = sig.colors;
-        const pantoneList = colors.pantone.map(p => (
-            `<span class="sig-pantone-chip" data-index="${index}" data-pantone="${p}">
-                ${p}<button type="button" class="sig-pantone-remove" aria-label="Rimuovi ${p}">×</button>
+        const pantoneList = colors.pantone.map((p, pantoneIndex) => (
+            `<span class="sig-pantone-chip" data-index="${index}" data-pantone-index="${pantoneIndex}">
+                <span class="sig-pantone-swatch" style="background-color: ${p.color};"></span>
+                ${p.name}<button type="button" class="sig-pantone-remove" aria-label="Rimuovi ${p.name}">×</button>
             </span>`
         )).join('');
 
@@ -332,6 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </label>
                 </div>
                 <div class="sig-pantone-row">
+                    <input type="color" class="sig-pantone-color" value="#000000" aria-label="Colore Pantone">
                     <input type="text" class="sig-pantone-input" placeholder="Pantone (es. 485 C)">
                     <button type="button" class="sig-pantone-add">+ Pantone</button>
                 </div>
@@ -373,9 +830,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const scaledTotalDepth = totalDepth * scale;
         let currentOffset = -scaledTotalDepth / 2;
 
-        depths.forEach(depth => {
+        depths.forEach((depth, index) => {
             const scaledDepth = Math.max(depth * scale, 0.5);
             const halfD = scaledDepth / 2;
+
+            // Alternanza tra grigio chiaro e grigio scuro basata sull'indice
+            const isDark = index % 2 !== 0;
+            const factor = isDark ? 0.88 : 1.0;
+            
+            const getColor = (r, g, b) => `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
 
             const block = document.createElement('div');
             block.className = 'signature-block';
@@ -398,6 +861,14 @@ document.addEventListener('DOMContentLoaded', function() {
             faces.right.className = 'face right';
             faces.top.className = 'face top';
             faces.bottom.className = 'face bottom';
+
+            // Applichiamo i colori con le diverse tonalità per simulare la luce, ma scalati per blocco
+            faces.front.style.backgroundColor = getColor(245, 245, 245);
+            faces.back.style.backgroundColor = getColor(224, 224, 224);
+            faces.left.style.backgroundColor = getColor(204, 204, 204);
+            faces.right.style.backgroundColor = getColor(204, 204, 204);
+            faces.top.style.backgroundColor = getColor(217, 217, 217);
+            faces.bottom.style.backgroundColor = getColor(217, 217, 217);
 
             [faces.front, faces.back].forEach(face => {
                 face.style.width = `${width * scale}px`;
@@ -511,7 +982,64 @@ document.addEventListener('DOMContentLoaded', function() {
         const defaultGram = parseInt(cartaGrammaturaSelect?.value, 10) || 100;
         const isOffset = tecnicaSelect && tecnicaSelect.value === 'offset';
 
+        // Mostra/nascondi il pulsante reset in base al numero di segnature
+        if (resetSignaturesBtn) {
+            resetSignaturesBtn.style.display = segnatureConfigurate.length > 0 ? 'block' : 'none';
+        }
+
         let hasInvalidSignature = false;
+        let dropTargetIndex = null;
+
+        const clearDragIndicator = () => {
+            const indicator = signaturesConfigList.querySelector('.drag-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        };
+
+        const showDragIndicatorAt = (targetIndex) => {
+            const items = Array.from(signaturesConfigList.querySelectorAll('.signature-item'));
+            clearDragIndicator();
+
+            const indicator = document.createElement('div');
+            indicator.className = 'drag-indicator';
+
+            if (items.length === 0 || targetIndex >= items.length) {
+                signaturesConfigList.appendChild(indicator);
+            } else {
+                signaturesConfigList.insertBefore(indicator, items[targetIndex]);
+            }
+        };
+
+        const getDropIndexFromPointer = (mouseY) => {
+            const items = Array.from(signaturesConfigList.querySelectorAll('.signature-item'));
+            for (let i = 0; i < items.length; i += 1) {
+                const rect = items[i].getBoundingClientRect();
+                const middle = rect.top + (rect.height / 2);
+                if (mouseY < middle) {
+                    return i;
+                }
+            }
+            return items.length;
+        };
+
+        const moveSignature = (fromIndex, targetIndex) => {
+            if (Number.isNaN(fromIndex) || fromIndex < 0 || fromIndex >= segnatureConfigurate.length) {
+                return false;
+            }
+
+            let insertIndex = Math.max(0, Math.min(targetIndex, segnatureConfigurate.length));
+            if (fromIndex < insertIndex) {
+                insertIndex -= 1;
+            }
+            if (insertIndex === fromIndex) {
+                return false;
+            }
+
+            const movedItem = segnatureConfigurate.splice(fromIndex, 1)[0];
+            segnatureConfigurate.splice(insertIndex, 0, movedItem);
+            return true;
+        };
 
         segnatureConfigurate.forEach((sig, index) => {
             if (isOffset) {
@@ -526,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const item = document.createElement('div');
             item.className = 'signature-item';
+            item.setAttribute('data-type', sig.pagine || '');
             item.draggable = true;
             
             totalPagineAssegnate += sig.pagine;
@@ -533,32 +1062,57 @@ document.addEventListener('DOMContentLoaded', function() {
             const gramWarning = getGrammaturaWarning(sig.pagine, sig.grammatura);
             const gramWarningHtml = gramWarning ? `<div class="sig-grammatura-warning">${gramWarning}</div>` : '';
 
+            const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
+            const availableTypes = isQuadrotto ? [12, 24] : [4, 8, 16, 32];
+            
+            let typeOptions = '';
+            availableTypes.forEach(type => {
+                typeOptions += `<option value="${type}" ${sig.pagine === type ? 'selected' : ''}>${type}°</option>`;
+            });
+            
+            const varianteSelectHtml = sig.pagine === 8 ? `
+                <select class="sig-variante-select" data-index="${index}" style="font-size: 12px; padding: 5px; border: 1px solid #000000; font-family: 'Montreal Mono', monospace;">
+                    <option value="" ${!sig.variante ? 'selected' : ''}>Standard</option>
+                    <option value="finestra" ${sig.variante === 'finestra' ? 'selected' : ''}>A finestra</option>
+                </select>
+            ` : '';
+            
+            // Mostra il campo modalità di stampa solo se la tecnica è offset
+            const stampaModeHtml = isOffset ? `
+                <select class="sig-stampa-mode-select" data-index="${index}" style="font-size: 12px; padding: 5px; border: 1px solid #000000; font-family: 'Montreal Mono', monospace;">
+                    <option value="normale" ${!sig.stampaMode || sig.stampaMode === 'normale' ? 'selected' : ''}>Bianca + Volta</option>
+                    <option value="stesso-lato" ${sig.stampaMode === 'stesso-lato' ? 'selected' : ''}>Bianca + Volta su se stessa</option>
+                </select>
+            ` : '';
+            
             item.innerHTML = `
-                <span class="drag-handle">☰</span>
-                <select class="sig-type-select" data-index="${index}">
-                    <option value="4" ${sig.pagine === 4 ? 'selected' : ''}>4°</option>
-                    <option value="8" ${sig.pagine === 8 ? 'selected' : ''}>8°</option>
-                    <option value="12" ${sig.pagine === 12 ? 'selected' : ''}>12°</option>
-                    <option value="16" ${sig.pagine === 16 ? 'selected' : ''}>16°</option>
-                    <option value="24" ${sig.pagine === 24 ? 'selected' : ''}>24°</option>
-                    <option value="32" ${sig.pagine === 32 ? 'selected' : ''}>32°</option>
-                </select>
-                <select class="sig-paper-type" data-index="${index}">
-                    ${buildPaperTypeOptions(sig.paperType)}
-                </select>
-                <input
-                    type="number"
-                    class="sig-grammatura"
-                    data-index="${index}"
-                    list="grammatura-options"
-                    min="60"
-                    max="400"
-                    step="5"
-                    value="${sig.grammatura || defaultGram}"
-                >
-                <button class="remove-btn">✕</button>
-                ${buildColorControls(sig, index)}
-                ${gramWarningHtml}
+                <div class="signature-header">
+                    <span class="drag-handle">☰</span>
+                    <span class="signature-label">Segnatura ${index + 1}</span>
+                    <button class="remove-signature-btn">Elimina segnatura</button>
+                </div>
+                <div class="signature-content">
+                    <select class="sig-type-select" data-index="${index}">
+                        ${typeOptions}
+                    </select>
+                    ${varianteSelectHtml}
+                    ${stampaModeHtml}
+                    <select class="sig-paper-type" data-index="${index}">
+                        ${buildPaperTypeOptions(sig.paperType)}
+                    </select>
+                    <input
+                        type="number"
+                        class="sig-grammatura"
+                        data-index="${index}"
+                        list="grammatura-options"
+                        min="60"
+                        max="400"
+                        step="5"
+                        value="${sig.grammatura || defaultGram}"
+                    >
+                    ${buildColorControls(sig, index)}
+                    ${gramWarningHtml}
+                </div>
             `;
 
             if (availableSignatureTypes.size > 0 && !availableSignatureTypes.has(sig.pagine)) {
@@ -567,9 +1121,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             item.querySelector('.sig-type-select').onchange = (e) => {
-                segnatureConfigurate[index].pagine = parseInt(e.target.value);
+                const newType = parseInt(e.target.value);
+                segnatureConfigurate[index].pagine = newType;
+                // Resetta la variante se non è più 8°
+                if (newType !== 8) {
+                    segnatureConfigurate[index].variante = null;
+                }
+                item.setAttribute('data-type', newType);
                 updatePreview();
             };
+            
+            const varianteSelect = item.querySelector('.sig-variante-select');
+            if (varianteSelect) {
+                varianteSelect.onchange = (e) => {
+                    segnatureConfigurate[index].variante = e.target.value || null;
+                    updatePreview();
+                };
+            }
+
+            const stampaModeSelect = item.querySelector('.sig-stampa-mode-select');
+            if (stampaModeSelect) {
+                stampaModeSelect.onchange = (e) => {
+                    segnatureConfigurate[index].stampaMode = e.target.value || 'normale';
+                    updatePreview();
+                };
+            }
 
             item.querySelector('.sig-paper-type').onchange = (e) => {
                 segnatureConfigurate[index].paperType = e.target.value;
@@ -596,17 +1172,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 const pantoneInput = item.querySelector('.sig-pantone-input');
+                const pantoneColorInput = item.querySelector('.sig-pantone-color');
                 const pantoneAdd = item.querySelector('.sig-pantone-add');
-                if (pantoneAdd && pantoneInput) {
+                if (pantoneAdd && pantoneInput && pantoneColorInput) {
                     pantoneAdd.addEventListener('click', () => {
                         const value = pantoneInput.value.trim();
+                        const colorValue = pantoneColorInput.value || '#000000';
                         if (!value) {
                             return;
                         }
-                        if (!sig.colors.pantone.includes(value)) {
-                            sig.colors.pantone.push(value);
+
+                        const exists = sig.colors.pantone.some(p => (
+                            p.name.toLowerCase() === value.toLowerCase() &&
+                            p.color.toLowerCase() === colorValue.toLowerCase()
+                        ));
+                        if (!exists) {
+                            sig.colors.pantone.push({ name: value, color: colorValue });
                         }
                         pantoneInput.value = '';
+                        pantoneColorInput.value = '#000000';
                         updatePreview();
                     });
                 }
@@ -614,35 +1198,74 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.querySelectorAll('.sig-pantone-remove').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const chip = e.target.closest('.sig-pantone-chip');
-                        const pantone = chip?.dataset.pantone;
-                        if (!pantone) {
+                        const pantoneIndex = parseInt(chip?.dataset.pantoneIndex || '', 10);
+                        if (Number.isNaN(pantoneIndex)) {
                             return;
                         }
-                        sig.colors.pantone = sig.colors.pantone.filter(p => p !== pantone);
+                        sig.colors.pantone.splice(pantoneIndex, 1);
                         updatePreview();
                     });
                 });
             }
 
-            item.querySelector('.remove-btn').onclick = () => {
+            item.querySelector('.remove-signature-btn').onclick = () => {
                 segnatureConfigurate.splice(index, 1);
                 updatePreview();
             };
 
             item.ondragstart = (e) => {
                 e.dataTransfer.setData('text/plain', index);
+                e.dataTransfer.effectAllowed = 'move';
             };
-            item.ondragover = (e) => e.preventDefault();
+            item.ondragend = () => {
+                dropTargetIndex = null;
+                clearDragIndicator();
+            };
+            item.ondragover = (e) => {
+                e.preventDefault();
+                dropTargetIndex = getDropIndexFromPointer(e.clientY);
+                showDragIndicatorAt(dropTargetIndex);
+            };
             item.ondrop = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                const toIndex = index;
-                const movedItem = segnatureConfigurate.splice(fromIndex, 1)[0];
-                segnatureConfigurate.splice(toIndex, 0, movedItem);
-                updatePreview();
+                const targetIndex = dropTargetIndex == null ? index : dropTargetIndex;
+                const moved = moveSignature(fromIndex, targetIndex);
+                dropTargetIndex = null;
+                clearDragIndicator();
+                if (moved) {
+                    updatePreview();
+                }
             };
 
             signaturesConfigList.appendChild(item);
         });
+
+        signaturesConfigList.ondragover = (e) => {
+            e.preventDefault();
+            dropTargetIndex = getDropIndexFromPointer(e.clientY);
+            showDragIndicatorAt(dropTargetIndex);
+        };
+        signaturesConfigList.ondrop = (e) => {
+            e.preventDefault();
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            const targetIndex = dropTargetIndex == null
+                ? signaturesConfigList.querySelectorAll('.signature-item').length
+                : dropTargetIndex;
+            const moved = moveSignature(fromIndex, targetIndex);
+            dropTargetIndex = null;
+            clearDragIndicator();
+            if (moved) {
+                updatePreview();
+            }
+        };
+        signaturesConfigList.ondragleave = (e) => {
+            if (!signaturesConfigList.contains(e.relatedTarget)) {
+                dropTargetIndex = null;
+                clearDragIndicator();
+            }
+        };
 
         const targetPagine = parseInt(numeroPagineInput.value) || 0;
         const residue = targetPagine - totalPagineAssegnate;
@@ -662,9 +1285,90 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function getMaxPrintableSignature() {
+        if (!availableSignatureTypes || availableSignatureTypes.size === 0) {
+            return null;
+        }
+
+        const printableTypes = Array.from(availableSignatureTypes)
+            .filter(type => type > 0)
+            .sort((a, b) => b - a);
+
+        return printableTypes.length > 0 ? printableTypes[0] : null;
+    }
+
+    function calculateFogliMacchina() {
+        const tiratura = parseInt(tiraturaInput?.value, 10) || 0;
+        if (tiratura <= 0 || segnatureConfigurate.length === 0) {
+            return {
+                total: 0,
+                base: 0,
+                hasOffsetWaste: false
+            };
+        }
+
+        const maxPrintableSignature = getMaxPrintableSignature();
+        let fogliPerCopia = 0;
+
+        segnatureConfigurate.forEach(sig => {
+            const sigType = parseInt(sig.pagine, 10) || 0;
+            if (sigType <= 0) {
+                return;
+            }
+
+            // Regola base: una segnatura equivale a un foglio macchina.
+            if (availableSignatureTypes.has(sigType)) {
+                fogliPerCopia += 1;
+                return;
+            }
+
+            // Se non stampabile, la segnatura viene suddivisa nelle segnature
+            // massime stampabili: ogni blocco risultante vale un foglio macchina.
+            if (maxPrintableSignature) {
+                fogliPerCopia += Math.ceil(sigType / maxPrintableSignature);
+                return;
+            }
+
+            // Senza riferimenti stampabili manteniamo una stima conservativa minima.
+            fogliPerCopia += 1;
+        });
+
+        const base = fogliPerCopia * tiratura;
+        const isOffset = tecnicaSelect && tecnicaSelect.value === 'offset';
+        const total = isOffset ? Math.ceil(base * 1.15) : base;
+
+        return {
+            total,
+            base,
+            hasOffsetWaste: isOffset && base > 0
+        };
+    }
+
+    function updateFogliMacchina() {
+        if (!fogliMacchinaDisplay) return;
+
+        const fogliData = calculateFogliMacchina();
+        if (fogliData.hasOffsetWaste) {
+            fogliMacchinaDisplay.textContent = `${fogliData.total.toLocaleString('it-IT')} (${fogliData.base.toLocaleString('it-IT')} + 15%)`;
+        } else {
+            fogliMacchinaDisplay.textContent = fogliData.total.toLocaleString('it-IT');
+        }
+    }
+
     function updatePreview(options = {}) {
         let dims;
         const selected = formatoSelect.value;
+
+        // Prima di tutto, se non stiamo aggiornando da un preset, 
+        // assicuriamoci che la forma sia sincronizzata con i valori attuali
+        if (!isUpdatingFromPreset) {
+            updateFormaFromDimensions();
+        }
+
+        // Mostra/nascondi il calcolo lastre in base alla tecnica
+        if (platesGroup) {
+            platesGroup.style.display = tecnicaSelect && tecnicaSelect.value === 'offset' ? 'block' : 'none';
+        }
 
         // Calcola dorso dinamico
         const calculatedDepth = calculateSpine();
@@ -675,28 +1379,63 @@ document.addEventListener('DOMContentLoaded', function() {
             platesDisplay.textContent = '';
         }
 
-        // Se è un preset, popola i campi con i valori del preset
-        if (selected !== 'custom' && dimensioniPreset[selected] && !isUpdatingFromPreset) {
+        // Se è un preset, popola i campi con i valori del preset in base alla forma
+        if (selected !== 'custom' && dimensioniPreset[selected]) {
+            const presetDims = dimensioniPreset[selected];
+            const forma = orientamentoSelect ? orientamentoSelect.value : 'rettangolare';
+            
+            let targetW, targetH;
+            
+            if (forma === 'quadrotto') {
+                targetW = Math.max(presetDims.width, presetDims.height);
+                targetH = targetW;
+            } else {
+                // Per 'rettangolare', mantieni l'orientamento attuale dei campi input (o default verticale)
+                const currentW = parseInt(customWidth.value) || 0;
+                const currentH = parseInt(customHeight.value) || 0;
+                
+                if (currentW > currentH) {
+                    // Orizzontale
+                    targetW = Math.max(presetDims.width, presetDims.height);
+                    targetH = Math.min(presetDims.width, presetDims.height);
+                } else {
+                    // Verticale (default)
+                    targetW = Math.min(presetDims.width, presetDims.height);
+                    targetH = Math.max(presetDims.width, presetDims.height);
+                }
+            }
+
             const currentW = parseInt(customWidth.value) || 0;
             const currentH = parseInt(customHeight.value) || 0;
             
-            const presetDims = dimensioniPreset[selected];
-            if ((currentW !== presetDims.width || currentH !== presetDims.height) &&
-                currentW <= LIMITS.maxWidth && currentH <= LIMITS.maxHeight) {
+            // Aggiorna solo se le dimensioni sono diverse o se sono vuote
+            if (currentW !== targetW || currentH !== targetH || !currentW || !currentH) {
+                const wasUpdating = isUpdatingFromPreset;
                 isUpdatingFromPreset = true;
-                customWidth.value = presetDims.width;
-                customHeight.value = presetDims.height;
+                customWidth.value = targetW;
+                customHeight.value = targetH;
                 customWidth.style.borderColor = '#000000';
                 customHeight.style.borderColor = '#000000';
                 widthError.style.display = 'none';
                 heightError.style.display = 'none';
-                isUpdatingFromPreset = false;
+                isUpdatingFromPreset = wasUpdating;
             }
         }
 
         let w = parseInt(customWidth.value) || 0;
         let h = parseInt(customHeight.value) || 0;
         let d = calculatedDepth;
+
+        // Se è quadrotto, forzare larghezza = altezza
+        const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
+        if (isQuadrotto && w && h) {
+            // Usa il valore più grande tra larghezza e altezza per entrambi
+            const maxDim = Math.max(w, h);
+            w = maxDim;
+            h = maxDim;
+            customWidth.value = maxDim;
+            customHeight.value = maxDim;
+        }
 
         if (w > LIMITS.maxWidth) {
             customWidth.style.borderColor = '#ff0000';
@@ -715,6 +1454,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (w > LIMITS.maxWidth || h > LIMITS.maxHeight) {
+            return;
+        }
+
+        // Se non ci sono dimensioni valide, mostra valori vuoti
+        if (!w || !h || !selected) {
+            if (formatoApertoDisplay) {
+                formatoApertoDisplay.textContent = '-- × -- mm';
+            }
+            if (foglioWarning) {
+                foglioWarning.textContent = '';
+                foglioWarning.style.display = 'none';
+            }
+            if (spineDisplay) {
+                spineDisplay.textContent = '0.0 mm';
+            }
+            if (platesDisplay) {
+                platesDisplay.textContent = '';
+            }
+            if (segnatureList) {
+                segnatureList.innerHTML = '';
+            }
+            if (suggerimentoOttimizzato) {
+                suggerimentoOttimizzato.innerHTML = '';
+            }
+            if (ottimizzazioneContainer) {
+                ottimizzazioneContainer.style.display = 'none';
+            }
+            buildSignatureStack([]);
             return;
         }
 
@@ -781,65 +1548,120 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Scala aumentata per rendere la preview più grande
         const scale = 1.5; 
-        const w = dims.width;
-        const h = dims.height;
-        const d = dims.depth;
+        const w_preview = dims.width;
+        const h_preview = dims.height;
+        const d_preview = dims.depth;
 
-        parallelepiped.style.width = `${w * scale}px`;
-        parallelepiped.style.height = `${h * scale}px`;
-
-        const defaultType = cartaTipoSelect ? cartaTipoSelect.value : 'patinata_opaca';
-        const defaultGram = parseInt(cartaGrammaturaSelect?.value, 10) || 100;
-        const depths = [];
-
-        if (segnatureConfigurate.length > 0) {
-            segnatureConfigurate.forEach((sig) => {
-                const thickness = getSignatureThickness(sig, defaultType, defaultGram);
-                depths.push(thickness);
-            });
-            if (GLUE_MM > 0) {
-                depths.push(GLUE_MM);
-            }
+        // Se le pagine superano 1000, non aggiornare il modello 3D
+        const numPagine = parseInt(numeroPagineInput.value, 10);
+        if (numPagine > 1000) {
+            // Continuiamo comunque con la validazione testuale alla fine
         } else {
-            depths.push(d);
-        }
+            parallelepiped.style.width = `${w_preview * scale}px`;
+            parallelepiped.style.height = `${h_preview * scale}px`;
 
-        buildSignatureStack(w, h, depths, scale);
-        applyPreviewTransform();
+            const defaultType = cartaTipoSelect ? cartaTipoSelect.value : 'patinata_opaca';
+            const defaultGram = parseInt(cartaGrammaturaSelect?.value, 10) || 100;
+            const depths = [];
 
-        const halfTotalD = (depths.reduce((sum, val) => sum + val, 0) * scale) / 2;
-
-        // Aggiorna etichette
-        if (widthLabel) {
-            widthLabel.textContent = `L: ${w}mm`;
-            widthLabel.style.transform = `translateX(-50%) translateZ(${halfTotalD + 5}px)`;
-        }
-        if (heightLabel) {
-            heightLabel.textContent = `A: ${h}mm`;
-            heightLabel.style.transform = `translateY(-50%) rotate(-90deg) translateZ(${halfTotalD + 5}px)`;
-        }
-        if (depthLabel) {
-            depthLabel.style.display = 'none';
-        }
-
-        if (platesDisplay) {
-            if (tecnicaSelect && tecnicaSelect.value === 'offset') {
-                let totalColors = 0;
-                segnatureConfigurate.forEach(sig => {
-                    totalColors += getSignatureColorCount(sig);
+            if (segnatureConfigurate.length > 0) {
+                segnatureConfigurate.forEach((sig) => {
+                    const thickness = getSignatureThickness(sig, defaultType, defaultGram);
+                    depths.push(thickness);
                 });
-                const totalPlates = totalColors * 2;
-                platesDisplay.textContent = `Lastre totali: ${totalPlates} (${totalColors} colori × 2 fronte/retro)`;
+                if (GLUE_MM > 0) {
+                    depths.push(GLUE_MM);
+                }
             } else {
-                platesDisplay.textContent = '';
+                depths.push(d_preview);
             }
+
+            buildSignatureStack(w_preview, h_preview, depths, scale);
+            applyPreviewTransform();
+
+            const halfTotalD = (depths.reduce((sum, val) => sum + val, 0) * scale) / 2;
+
+            // Aggiorna etichette
+            if (widthLabel) {
+                widthLabel.textContent = `L: ${w_preview}mm`;
+                widthLabel.style.transform = `translateX(-50%) translateZ(${halfTotalD + 5}px)`;
+            }
+            if (heightLabel) {
+                heightLabel.textContent = `A: ${h_preview}mm`;
+                heightLabel.style.transform = `translateY(-50%) rotate(-90deg) translateZ(${halfTotalD + 5}px)`;
+            }
+            if (depthLabel) {
+                depthLabel.style.display = 'none';
+            }
+
+            if (platesDisplay) {
+                if (tecnicaSelect && tecnicaSelect.value === 'offset') {
+                    let totalPlates = 0;
+                    let totalColors = 0;
+                    segnatureConfigurate.forEach(sig => {
+                        const colorCount = getSignatureColorCount(sig);
+                        totalColors += colorCount;
+                        const multiplier = sig.stampaMode === 'stesso-lato' ? 1 : 2;
+                        totalPlates += colorCount * multiplier;
+                    });
+                    const normalPlates = totalColors * 2;
+                    const savedPlates = normalPlates - totalPlates;
+                    if (savedPlates > 0) {
+                        platesDisplay.textContent = `Lastre totali: ${totalPlates} (${totalColors} colori × 2 fronte/retro, risparmio: ${savedPlates} lastre)`;
+                    } else {
+                        platesDisplay.textContent = `Lastre totali: ${totalPlates} (${totalColors} colori × 2 fronte/retro)`;
+                    }
+                } else {
+                    platesDisplay.textContent = '';
+                }
+            }
+
+            // Calcola fogli macchina necessari
+            updateFogliMacchina();
         }
         }
 
         // Validazione pagine (non influisce sulla preview, solo avviso)
         validatePagine();
+
+        // Se siamo in vista imposizione, aggiorna anche quella
+        if (currentView === 'imposition') {
+            updateImpositionView();
+        }
     }
     
+    if (orientamentoSelect) {
+        orientamentoSelect.addEventListener('change', function() {
+            const val = orientamentoSelect.value;
+            const w = parseInt(customWidth.value) || 0;
+            const h = parseInt(customHeight.value) || 0;
+
+            if (w > 0 && h > 0) {
+                isUpdatingFromPreset = true;
+                if (val === 'quadrotto' && w !== h) {
+                    const maxDim = Math.max(w, h);
+                    customWidth.value = maxDim;
+                    customHeight.value = maxDim;
+                }
+                isUpdatingFromPreset = false;
+            }
+
+            updateFormatoOptions();
+            
+            if (val === 'quadrotto') {
+                // Converti automaticamente le segnature non valide per quadrotto
+                const validTypes = [12, 24];
+                segnatureConfigurate.forEach(sig => {
+                    if (!validTypes.includes(sig.pagine)) {
+                        const converted = validTypes.find(type => type <= sig.pagine) || validTypes[validTypes.length - 1];
+                        sig.pagine = converted;
+                    }
+                });
+            }
+            updatePreview();
+        });
+    }
+
     formatoSelect.addEventListener('change', function() {
         isUpdatingFromPreset = true;
         updatePreview();
@@ -848,6 +1670,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     tecnicaSelect.addEventListener('change', function() {
         updateFoglioMacchina();
+        // Mostra/nascondi il calcolo lastre in base alla tecnica
+        if (platesGroup) {
+            platesGroup.style.display = tecnicaSelect.value === 'offset' ? 'block' : 'none';
+        }
         updatePreview();
     });
 
@@ -859,23 +1685,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     [customWidth, customHeight].forEach(input => {
         input.addEventListener('input', function() {
+            if (isUpdatingFromPreset) return;
+
+            // Aggiorna la forma in base alle dimensioni inserite
+            updateFormaFromDimensions();
+            
             // Se l'utente modifica manualmente i valori, controlla se corrisponde a un preset
-            if (!isUpdatingFromPreset) {
-                const matchingPreset = checkIfMatchesPreset();
-                if (!matchingPreset && formatoSelect.value !== 'custom') {
-                    formatoSelect.value = 'custom';
-                }
+            const matchingPreset = checkIfMatchesPreset();
+            if (!matchingPreset && formatoSelect.value !== 'custom') {
+                formatoSelect.value = 'custom';
+            } else if (matchingPreset && formatoSelect.value !== matchingPreset) {
+                formatoSelect.value = matchingPreset;
             }
+            
             updatePreview();
         });
     });
     
-    // Inizializzazione
-    updateFoglioMacchina();
-    updatePreview();
+    // Inizializzazione - campi lasciati vuoti
+    updateFormatoOptions();
+    
+    // Nascondi il calcolo lastre all'avvio se la tecnica non è offset
+    if (platesGroup) {
+        platesGroup.style.display = tecnicaSelect && tecnicaSelect.value === 'offset' ? 'block' : 'none';
+    }
 
     // Listener per numero pagine
     numeroPagineInput.addEventListener('input', updatePreview);
+
+    // Listener per tiratura
+    if (tiraturaInput) {
+        tiraturaInput.addEventListener('input', function() {
+            // Chiama updatePreview per assicurarsi che availableSignatureTypes sia aggiornato
+            updatePreview();
+        });
+    }
 
     if (cartaTipoSelect) {
         cartaTipoSelect.addEventListener('change', updatePreview);
@@ -933,10 +1777,15 @@ document.addEventListener('DOMContentLoaded', function() {
         addSignatureBtn.addEventListener('click', function() {
             const defaultType = cartaTipoSelect ? cartaTipoSelect.value : 'patinata_opaca';
             const defaultGram = parseInt(cartaGrammaturaSelect?.value, 10) || 100;
+            const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
+            const defaultPagine = isQuadrotto ? 12 : 16;
+            
             segnatureConfigurate.push({
-                pagine: 16,
+                pagine: defaultPagine,
                 paperType: defaultType,
-                grammatura: defaultGram
+                grammatura: defaultGram,
+                variante: null,
+                stampaMode: 'normale'
             });
             updatePreview();
         });
@@ -955,44 +1804,256 @@ document.addEventListener('DOMContentLoaded', function() {
             const defaultGram = parseInt(cartaGrammaturaSelect?.value, 10) || 100;
             const isOffset = tecnicaSelect && tecnicaSelect.value === 'offset';
 
+            const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
             const available = Array.from(availableSignatureTypes);
-            const sizes = available.length > 0 ? available.sort((a, b) => b - a) : [32, 16, 8, 4];
+            const defaultSizes = isQuadrotto ? [24, 12] : [32, 16, 8, 4];
+            const sizes = available.length > 0 ? available.sort((a, b) => b - a) : defaultSizes;
 
             let remaining = totalPages;
             const generated = [];
 
             while (remaining > 0) {
-                const size = sizes.find(val => val <= remaining) || 4;
+                const size = sizes.find(val => val <= remaining);
+                
+                if (!size) {
+                    // Se non c'è una segnatura che entra nelle pagine rimanenti, ferma il ciclo
+                    // per evitare di aggiungere pagine extra
+                    break;
+                }
+                
                 generated.push({
                     pagine: size,
                     paperType: defaultType,
                     grammatura: defaultGram,
-                    colors: isOffset ? { c: true, m: true, y: true, k: true, pantone: [] } : undefined
+                    colors: isOffset ? { c: true, m: true, y: true, k: true, pantone: [] } : undefined,
+                    variante: null,
+                    stampaMode: 'normale'
                 });
                 remaining -= size;
             }
 
-            segnatureConfigurate = generated;
+            // Riordina: segnature più piccole in penultima posizione, più grande in ultima
+            if (generated.length > 1) {
+                // Trova la segnatura più grande
+                const maxSize = Math.max(...generated.map(s => s.pagine));
+                const maxIndex = generated.findIndex(s => s.pagine === maxSize);
+                const maxSignature = generated[maxIndex];
+                
+                // Trova le segnature più piccole (valore minimo)
+                const minSize = Math.min(...generated.map(s => s.pagine));
+                const smallSignatures = generated.filter(s => s.pagine === minSize);
+                
+                // Rimuovi la più grande e le più piccole dall'array originale
+                const others = generated.filter((s, i) => 
+                    i !== maxIndex && s.pagine !== minSize
+                );
+                
+                // Ricostruisci l'array: altre segnature, poi le più piccole, poi la più grande
+                segnatureConfigurate = [...others, ...smallSignatures, maxSignature];
+            } else {
+                segnatureConfigurate = generated;
+            }
+            
+            updatePreview();
+        });
+    }
+
+    if (resetSignaturesBtn) {
+        resetSignaturesBtn.addEventListener('click', function() {
+            segnatureConfigurate = [];
             updatePreview();
         });
     }
 
     if (resetProjectBtn) {
         resetProjectBtn.addEventListener('click', function() {
-            formatoSelect.value = 'A4';
-            tecnicaSelect.value = 'offset';
+            if (nomeProgettoInput) nomeProgettoInput.value = '';
+            formatoSelect.value = '';
+            if (orientamentoSelect) orientamentoSelect.value = '';
+            tecnicaSelect.value = '';
             updateFoglioMacchina();
+            updateFormatoOptions();
 
-            customWidth.value = 210;
-            customHeight.value = 297;
-            numeroPagineInput.value = 100;
-            cartaTipoSelect.value = 'patinata_opaca';
-            cartaGrammaturaSelect.value = 100;
+            customWidth.value = '';
+            customHeight.value = '';
+            numeroPagineInput.value = '';
+            if (cartaTipoSelect) cartaTipoSelect.value = '';
+            if (cartaGrammaturaSelect) cartaGrammaturaSelect.value = '';
+            if (tiraturaInput) tiraturaInput.value = '';
 
             segnatureConfigurate = [];
             availableSignatureTypes = new Set();
 
             updatePreview();
         });
+    }
+
+    function generatePDFReport() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let yPos = 20;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 20;
+        const now = new Date();
+        
+        const nomeProgetto = nomeProgettoInput ? nomeProgettoInput.value.trim() : '';
+        const projectTitle = nomeProgetto || 'Untitled';
+        const fileName = `Report Progetto ${projectTitle}.pdf`;
+
+        function addSectionTitle(text) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 20;
+            }
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(text, margin, yPos);
+            yPos += 10;
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+        }
+
+        function addText(text) {
+            doc.text(text, margin, yPos);
+            yPos += 7;
+        }
+
+        function savePDF() {
+            doc.save(fileName);
+        }
+
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('REPORT PROGETTO', pageWidth / 2, yPos, { align: 'center' });
+        yPos += 15;
+
+        if (nomeProgetto) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(nomeProgetto, pageWidth / 2, yPos, { align: 'center' });
+            yPos += 10;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const dateStr = now.toLocaleDateString('it-IT', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        doc.text(`Generato il: ${dateStr}`, pageWidth / 2, yPos, { align: 'center' });
+        yPos += 20;
+
+        addSectionTitle('DATI GENERALI');
+
+        const tecnica = tecnicaSelect.value || 'Non specificato';
+        const tecnicaLabel = tecnica === 'offset' ? 'Offset' : tecnica === 'digitale' ? 'Digitale' : tecnica;
+        addText(`Tecnica di stampa: ${tecnicaLabel}`);
+
+        const foglioLabel = foglioSelect.options[foglioSelect.selectedIndex]?.text || 'Non specificato';
+        addText(`Foglio macchina: ${foglioLabel}`);
+
+        const orientamento = orientamentoSelect ? orientamentoSelect.value : '';
+        const orientamentoLabel = orientamento === 'quadrotto' ? 'Quadrotto' : orientamento === 'rettangolare' ? 'Rettangolare' : 'Non specificato';
+        addText(`Forma: ${orientamentoLabel}`);
+
+        const formatoLabel = formatoSelect.options[formatoSelect.selectedIndex]?.text || formatoSelect.value || 'Non specificato';
+        addText(`Formato (chiuso): ${formatoLabel}`);
+
+        const width = parseInt(customWidth.value) || 0;
+        const height = parseInt(customHeight.value) || 0;
+        if (width && height) {
+            addText(`Dimensioni (chiuso): ${width} × ${height} mm`);
+            addText(`Formato aperto: ${width * 2} × ${height} mm`);
+        }
+
+        const numPagine = parseInt(numeroPagineInput.value) || 0;
+        addText(`Numero pagine: ${numPagine || 'Non specificato'}`);
+
+        const cartaTipo = cartaTipoSelect ? cartaTipoSelect.value : '';
+        const cartaTipoLabel = cartaTipoSelect ? cartaTipoSelect.options[cartaTipoSelect.selectedIndex]?.text || cartaTipo : 'Non specificato';
+        addText(`Tipo carta: ${cartaTipoLabel}`);
+
+        const grammatura = cartaGrammaturaSelect ? cartaGrammaturaSelect.value : '';
+        addText(`Grammatura: ${grammatura ? grammatura + ' g/m²' : 'Non specificato'}`);
+
+        const spine = spineDisplay ? spineDisplay.textContent : '0.0 mm';
+        addText(`Dorso stimato: ${spine}`);
+
+        if (platesDisplay && platesDisplay.textContent) {
+            addText(`Lastre: ${platesDisplay.textContent}`);
+        }
+
+        const tiratura = tiraturaInput ? parseInt(tiraturaInput.value, 10) : 0;
+        if (tiratura > 0) {
+            addText(`Tiratura: ${tiratura.toLocaleString('it-IT')}`);
+            
+            const fogliData = calculateFogliMacchina();
+            if (fogliData.hasOffsetWaste) {
+                addText(`Fogli macchina necessari: ${fogliData.total.toLocaleString('it-IT')} (${fogliData.base.toLocaleString('it-IT')} + 15%)`);
+            } else {
+                addText(`Fogli macchina necessari: ${fogliData.total.toLocaleString('it-IT')}`);
+            }
+        }
+
+        yPos += 10;
+
+        if (segnatureConfigurate.length > 0) {
+            addSectionTitle('SEGNATURE');
+
+            let totalPagineAssegnate = 0;
+            segnatureConfigurate.forEach((sig, index) => {
+                if (yPos > 270) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+
+                const sigType = sig.pagine || 0;
+                const sigPaperType = sig.paperType || cartaTipo || 'Non specificato';
+                const sigGrammatura = sig.grammatura || grammatura || 'Non specificato';
+                
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Segnatura ${index + 1}:`, margin, yPos);
+                yPos += 6;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.text(`  Tipo: ${sigType}°`, margin + 5, yPos);
+                yPos += 6;
+                doc.text(`  Carta: ${sigPaperType}`, margin + 5, yPos);
+                yPos += 6;
+                doc.text(`  Grammatura: ${sigGrammatura} g/m²`, margin + 5, yPos);
+                yPos += 6;
+
+                if (tecnica === 'offset' && sig.colors) {
+                    ensureSignatureColors(sig);
+                    const processColors = [];
+                    if (sig.colors.c) processColors.push('C');
+                    if (sig.colors.m) processColors.push('M');
+                    if (sig.colors.y) processColors.push('Y');
+                    if (sig.colors.k) processColors.push('K');
+                    const colorsText = processColors.length > 0 ? processColors.join('+') : 'Nessuno';
+                    const pantoneList = sig.colors.pantone && sig.colors.pantone.length > 0
+                        ? ` + Pantone: ${sig.colors.pantone.map(p => `${p.name} (${p.color})`).join(', ')}`
+                        : '';
+                    doc.text(`  Colori: ${colorsText}${pantoneList}`, margin + 5, yPos);
+                    yPos += 6;
+                }
+
+                totalPagineAssegnate += sigType;
+                yPos += 3;
+            });
+
+            doc.text(`Totale pagine assegnate: ${totalPagineAssegnate} / ${numPagine}`, margin, yPos);
+            yPos += 10;
+        }
+
+        savePDF();
+    }
+
+    const downloadReportBtn = document.getElementById('download-report-btn');
+    if (downloadReportBtn) {
+        downloadReportBtn.addEventListener('click', generatePDFReport);
     }
 });
