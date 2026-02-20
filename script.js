@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const impositionView = document.getElementById('imposition-view');
     const tiraturaInput = document.getElementById('tiratura');
     const fogliMacchinaDisplay = document.getElementById('fogli-macchina-display');
-    let currentView = '3d'; // '3d' o 'imposition'
+    let currentView = 'imposition'; // '3d' o 'imposition'
 
     let segnatureConfigurate = [];
     function updateImpositionView() {
@@ -1771,6 +1771,66 @@ document.addEventListener('DOMContentLoaded', function() {
             zoom = Math.max(0.5, Math.min(2.5, zoom));
             applyPreviewTransform();
         }, { passive: false });
+
+        // Supporto touch per mobile
+        let touchStartDistance = 0;
+        let touchStartZoom = 1;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartRotationX = 0;
+        let touchStartRotationY = 0;
+
+        previewContainer.addEventListener('touchstart', function(event) {
+            if (event.touches.length === 1) {
+                // Un dito: prepara per rotazione
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+                touchStartRotationX = rotationX;
+                touchStartRotationY = rotationY;
+                previewContainer.classList.add('dragging');
+            } else if (event.touches.length === 2) {
+                // Due dita: prepara per zoom
+                event.preventDefault();
+                const touch1 = event.touches[0];
+                const touch2 = event.touches[1];
+                touchStartDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                touchStartZoom = zoom;
+            }
+        }, { passive: false });
+
+        previewContainer.addEventListener('touchmove', function(event) {
+            if (event.touches.length === 1) {
+                // Un dito: ruota il modello
+                event.preventDefault();
+                const dx = event.touches[0].clientX - touchStartX;
+                const dy = event.touches[0].clientY - touchStartY;
+                rotationY = touchStartRotationY + dx * 0.3;
+                rotationX = touchStartRotationX - dy * 0.3;
+                rotationX = Math.max(-80, Math.min(80, rotationX));
+                applyPreviewTransform();
+            } else if (event.touches.length === 2) {
+                // Due dita: zoom
+                event.preventDefault();
+                const touch1 = event.touches[0];
+                const touch2 = event.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                const scale = currentDistance / touchStartDistance;
+                zoom = touchStartZoom * scale;
+                zoom = Math.max(0.5, Math.min(2.5, zoom));
+                applyPreviewTransform();
+            }
+        }, { passive: false });
+
+        previewContainer.addEventListener('touchend', function(event) {
+            previewContainer.classList.remove('dragging');
+            touchStartDistance = 0;
+        });
     }
 
     if (addSignatureBtn) {
@@ -2055,5 +2115,166 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadReportBtn = document.getElementById('download-report-btn');
     if (downloadReportBtn) {
         downloadReportBtn.addEventListener('click', generatePDFReport);
+    }
+
+    // Inizializza la vista imposition come predefinita
+    setPreviewView('imposition');
+
+    function saveProject() {
+        const projectData = {
+            version: '1.0',
+            nomeProgetto: nomeProgettoInput ? nomeProgettoInput.value : '',
+            tecnicaStampa: tecnicaSelect ? tecnicaSelect.value : '',
+            foglioMacchina: foglioSelect ? foglioSelect.value : '',
+            orientamento: orientamentoSelect ? orientamentoSelect.value : '',
+            formato: formatoSelect ? formatoSelect.value : '',
+            customWidth: customWidth ? customWidth.value : '',
+            customHeight: customHeight ? customHeight.value : '',
+            numeroPagine: numeroPagineInput ? numeroPagineInput.value : '',
+            cartaTipo: cartaTipoSelect ? cartaTipoSelect.value : '',
+            cartaGrammatura: cartaGrammaturaSelect ? cartaGrammaturaSelect.value : '',
+            tiratura: tiraturaInput ? tiraturaInput.value : '',
+            segnatureConfigurate: segnatureConfigurate.map(sig => ({
+                pagine: sig.pagine,
+                variante: sig.variante || null,
+                stampaMode: sig.stampaMode || null,
+                paperType: sig.paperType || null,
+                grammatura: sig.grammatura || null,
+                colors: sig.colors ? {
+                    c: sig.colors.c || false,
+                    m: sig.colors.m || false,
+                    y: sig.colors.y || false,
+                    k: sig.colors.k || false,
+                    pantone: sig.colors.pantone ? sig.colors.pantone.map(p => 
+                        typeof p === 'string' ? { name: p, color: '#000000' } : p
+                    ) : []
+                } : null
+            }))
+        };
+
+        const jsonStr = JSON.stringify(projectData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const nomeProgetto = nomeProgettoInput ? nomeProgettoInput.value.trim() : 'progetto';
+        a.download = `${nomeProgetto || 'progetto'}_book-designer.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function loadProject(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const projectData = JSON.parse(e.target.result);
+                
+                // Ripristina i campi base
+                if (nomeProgettoInput && projectData.nomeProgetto) {
+                    nomeProgettoInput.value = projectData.nomeProgetto;
+                }
+                if (tecnicaSelect && projectData.tecnicaStampa) {
+                    tecnicaSelect.value = projectData.tecnicaStampa;
+                }
+                if (foglioSelect && projectData.foglioMacchina) {
+                    foglioSelect.value = projectData.foglioMacchina;
+                }
+                if (orientamentoSelect && projectData.orientamento) {
+                    orientamentoSelect.value = projectData.orientamento;
+                }
+                if (formatoSelect && projectData.formato) {
+                    formatoSelect.value = projectData.formato;
+                }
+                if (customWidth && projectData.customWidth) {
+                    customWidth.value = projectData.customWidth;
+                }
+                if (customHeight && projectData.customHeight) {
+                    customHeight.value = projectData.customHeight;
+                }
+                if (numeroPagineInput && projectData.numeroPagine) {
+                    numeroPagineInput.value = projectData.numeroPagine;
+                }
+                if (cartaTipoSelect && projectData.cartaTipo) {
+                    cartaTipoSelect.value = projectData.cartaTipo;
+                }
+                if (cartaGrammaturaSelect && projectData.cartaGrammatura) {
+                    cartaGrammaturaSelect.value = projectData.cartaGrammatura;
+                }
+                if (tiraturaInput && projectData.tiratura) {
+                    tiraturaInput.value = projectData.tiratura;
+                }
+
+                // Ripristina le segnature
+                if (projectData.segnatureConfigurate && Array.isArray(projectData.segnatureConfigurate)) {
+                    segnatureConfigurate = projectData.segnatureConfigurate.map(sig => {
+                        const restored = {
+                            pagine: sig.pagine,
+                            variante: sig.variante || null,
+                            stampaMode: sig.stampaMode || null,
+                            paperType: sig.paperType || null,
+                            grammatura: sig.grammatura || null
+                        };
+                        if (sig.colors) {
+                            restored.colors = {
+                                c: sig.colors.c || false,
+                                m: sig.colors.m || false,
+                                y: sig.colors.y || false,
+                                k: sig.colors.k || false,
+                                pantone: sig.colors.pantone ? sig.colors.pantone.map(p => 
+                                    typeof p === 'string' ? { name: p, color: '#000000' } : p
+                                ) : []
+                            };
+                        }
+                        return restored;
+                    });
+                } else {
+                    segnatureConfigurate = [];
+                }
+
+                // Aggiorna le opzioni del foglio e triggera gli eventi necessari
+                if (tecnicaSelect) {
+                    tecnicaSelect.dispatchEvent(new Event('change'));
+                }
+                if (foglioSelect) {
+                    foglioSelect.dispatchEvent(new Event('change'));
+                }
+                if (orientamentoSelect) {
+                    orientamentoSelect.dispatchEvent(new Event('change'));
+                }
+                if (formatoSelect) {
+                    formatoSelect.dispatchEvent(new Event('change'));
+                }
+
+                // Aggiorna la preview
+                updatePreview();
+                
+                alert('Progetto caricato con successo!');
+            } catch (error) {
+                console.error('Errore nel caricamento del progetto:', error);
+                alert('Errore nel caricamento del file. Assicurati che sia un file valido.');
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    const saveProjectBtn = document.getElementById('save-project-btn');
+    if (saveProjectBtn) {
+        saveProjectBtn.addEventListener('click', saveProject);
+    }
+
+    const loadProjectBtn = document.getElementById('load-project-btn');
+    const loadProjectInput = document.getElementById('load-project-input');
+    if (loadProjectBtn && loadProjectInput) {
+        loadProjectBtn.addEventListener('click', function() {
+            loadProjectInput.click();
+        });
+        loadProjectInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                loadProject(e.target.files[0]);
+                e.target.value = ''; // Reset per permettere di ricaricare lo stesso file
+            }
+        });
     }
 });

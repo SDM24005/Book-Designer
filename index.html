@@ -21,15 +21,15 @@
     <main class="container">
         <div class="preview-section">
             <div class="preview-toggle-container">
-                <button id="toggle-view-btn" class="action-button">Visualizza Imposizione</button>
+                <button id="toggle-view-btn" class="action-button">Visualizza 3D</button>
             </div>
-            <div class="preview-container" id="preview3D">
+            <div class="preview-container" id="preview3D" style="display: none;">
                 <div class="parallelepiped book-stack">
                     <div class="dimension-label width">Larghezza</div>
                     <div class="dimension-label height">Altezza</div>
                 </div>
             </div>
-            <div id="imposition-view" class="imposition-container" style="display: none;">
+            <div id="imposition-view" class="imposition-container">
                 <!-- Popolato via JS -->
             </div>
         </div>
@@ -39,6 +39,10 @@
                 <div class="data-panel-header">
                     <h2>Dati Progetto</h2>
                     <button id="reset-project" class="reset-project-btn">Reset Progetto</button>
+                </div>
+                <div class="form-group" style="margin-top: 10px; margin-bottom: 15px;">
+                    <input type="file" id="load-project-input" accept=".json" style="display: none;">
+                    <button id="load-project-btn" class="action-button" style="width: 100%; padding: 10px; font-size: 13px;">Carica Progetto</button>
                 </div>
                 <hr class="divider">
 
@@ -223,7 +227,10 @@
                 <hr class="divider">
 
                 <div class="form-group">
-                    <button id="download-report-btn" class="action-button" style="width: 100%; padding: 12px; font-size: 14px;">Scarica Report</button>
+                    <div class="project-actions">
+                        <button id="save-project-btn" class="action-button" style="flex: 1; padding: 12px; font-size: 14px;">Salva Progetto</button>
+                        <button id="download-report-btn" class="action-button" style="flex: 1; padding: 12px; font-size: 14px;">Scarica Report</button>
+                    </div>
                 </div>
             </div>
         </div>

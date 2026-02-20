@@ -105,7 +105,7 @@ header h1 {
     justify-content: flex-start; /* Changed from center to allow scrolling from top */
     padding: 80px 40px 40px 40px; /* Added more top padding for the toggle button */
     overflow-y: auto;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
 }
 
 .imposition-sheet {
@@ -306,6 +306,7 @@ header h1 {
 .imposition-grid-32 .imposition-cell .page-num {
     position: relative;
     display: inline-flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     line-height: 1;
@@ -313,24 +314,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-32 .imposition-cell.base-left::before {
+.imposition-grid-32 .imposition-cell .page-num::after {
     content: '';
-    position: absolute;
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 1.2em;
-    border-left: 2px solid #000000;
-}
-
-.imposition-grid-32 .imposition-cell.base-right::after {
-    content: '';
-    position: absolute;
-    right: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    height: 1.2em;
-    border-right: 2px solid #000000;
+    display: block;
+    width: 1.25em;
+    border-bottom: 2px solid #000000;
+    margin-top: 4px;
 }
 
 /* Orientamento: la parte bassa del numero punta verso la linea di base */
@@ -913,6 +902,12 @@ body.tecnica-digitale .optgroup-offset {
     background-color: #f0f0f0;
 }
 
+.project-actions {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
 .pagine-residue {
     font-size: 12px;
     font-weight: 600;
@@ -945,8 +940,42 @@ body.tecnica-digitale .optgroup-offset {
         overflow: auto;
     }
 
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background-color: #ffffff;
+        padding: 20px 0 0 0;
+    }
+
+    .header-content {
+        padding: 0 20px 12px 20px;
+    }
+
+    .container {
+        margin-top: 120px; /* Spazio per header + tab bar fissi */
+    }
+
     .mobile-view-tabs {
         display: flex;
+        width: 100%;
+        gap: 0;
+        justify-content: stretch;
+        margin-top: 0;
+        border-top: 2px solid #000000;
+    }
+
+    .mobile-tab-btn {
+        flex: 1;
+        padding: 12px 8px;
+        border: none;
+        border-right: 1px solid #000000;
+    }
+
+    .mobile-tab-btn:last-child {
+        border-right: none;
     }
 
     .container {
@@ -980,5 +1009,52 @@ body.tecnica-digitale .optgroup-offset {
     body.mobile-view-imposition .data-section,
     body.mobile-view-3d .data-section {
         display: none;
+    }
+
+    /* Riduci dimensioni imposition su mobile */
+    .imposition-container {
+        padding: 20px 10px 20px 10px;
+    }
+
+    .imposition-sheet {
+        max-width: 100%;
+        gap: 20px;
+    }
+
+    .imposition-section {
+        padding: 10px;
+    }
+
+    .imposition-title {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+
+    .imposition-pair {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .imposition-side {
+        width: 100%;
+    }
+
+    .side-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .imposition-grid {
+        max-width: 100%;
+        font-size: 14px;
+    }
+
+    .imposition-cell {
+        padding: 5px;
+        font-size: 14px;
+    }
+
+    .imposition-cell .page-num {
+        font-size: 14px;
     }
 }
