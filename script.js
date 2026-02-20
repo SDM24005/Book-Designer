@@ -649,8 +649,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
 
-        if (raw % 4 !== 0) {
-            pagineWarning.textContent = 'Il numero di pagine deve essere multiplo di 4.';
+        if (raw % 2 !== 0) {
+            pagineWarning.textContent = 'Il numero di pagine deve essere multiplo di 2.';
             pagineWarning.classList.add('warning-red');
             numeroPagineInput.style.borderColor = '#d8000c';
             return false;
