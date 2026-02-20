@@ -195,12 +195,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-4 .imposition-cell .page-num::after {
+.imposition-grid-4 .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -216,12 +216,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-8 .imposition-cell .page-num::after {
+.imposition-grid-8 .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
 }
 
 .imposition-grid-8 .imposition-cell.base-left .page-num {
@@ -243,12 +243,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-12 .imposition-cell .page-num::after {
+.imposition-grid-12 .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
 }
 
 .imposition-grid-12 .imposition-cell.base-left .page-num {
@@ -269,12 +269,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-16 .imposition-cell .page-num::after {
+.imposition-grid-16 .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -289,12 +289,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-8-finestra .imposition-cell .page-num::after {
+.imposition-grid-8-finestra .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -314,12 +314,12 @@ header h1 {
     margin: 0 auto;
 }
 
-.imposition-grid-32 .imposition-cell .page-num::after {
+.imposition-grid-32 .imposition-cell .page-num::before {
     content: '';
     display: block;
     width: 1.25em;
-    border-bottom: 2px solid #000000;
-    margin-top: 4px;
+    border-top: 2px solid #000000;
+    margin-bottom: 4px;
 }
 
 /* Orientamento: la parte bassa del numero punta verso la linea di base */
@@ -338,6 +338,15 @@ header h1 {
 
 .imposition-grid-32 .imposition-cell.rotated.base-right .page-num {
     transform: rotate(90deg);
+}
+
+/* Correzione 32°: prima riga con orientamento invertito di 180° */
+.imposition-grid-32 .imposition-cell:nth-child(-n+4).rotated.base-left .page-num {
+    transform: rotate(90deg);
+}
+
+.imposition-grid-32 .imposition-cell:nth-child(-n+4).rotated.base-right .page-num {
+    transform: rotate(-90deg);
 }
 
 .preview-container {
