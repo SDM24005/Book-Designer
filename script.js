@@ -121,6 +121,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 volta: [{ n: 2, r: false }, { n: 3, r: false }]
             };
         }
+        if (type === 6) {
+            return {
+                label: 'Sestino a 3 ante (6°)',
+                cols: 3,
+                rows: 1,
+                bianca: [{ n: 5, r: false }, { n: 6, r: false }, { n: 1, r: false }],
+                volta: [{ n: 2, r: false }, { n: 3, r: false }, { n: 4, r: false }]
+            };
+        }
         if (type === 8) {
             if (variante === 'finestra') {
                 return {
@@ -223,6 +232,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (type === 4) {
             gridEl.classList.add('imposition-grid-4');
+        }
+        if (type === 6) {
+            gridEl.classList.add('imposition-grid-6');
         }
         if (type === 8) {
             gridEl.classList.add('imposition-grid-8');
@@ -474,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateSegnature(openWidth, openHeight, sheet) {
         const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
-        const types = isQuadrotto ? [12, 24] : [4, 8, 16, 32];
+        const types = isQuadrotto ? [12, 24] : [4, 6, 8, 16, 32];
         segnatureList.innerHTML = '';
         availableSignatureTypes = new Set();
         
@@ -485,6 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Verifica semplificata di imposizione
             // 4 pag = 1 foglio aperto (fronte/retro) -> servono 1 aperti per lato
+            // 6 pag = 3 ante -> ingombro 1.5x sul lato lungo del formato aperto
             // 8 pag = 2 fogli aperti -> servono 2 aperti per lato
             // 12 pag = 3 fogli aperti -> servono 3 aperti per lato
             // 16 pag = 4 fogli aperti -> servono 4 aperti per lato
@@ -502,21 +515,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 8: [[4, 2], [2, 4], [8, 1], [1, 8]]
             };
 
-            const possibleGrids = grids[numApertiPerLato];
-            if (possibleGrids) {
-                for (const [cols, rows] of possibleGrids) {
-                    const totalW = openWidth * cols;
-                    const totalH = openHeight * rows;
-                    const totalW_rot = openWidth * rows;
-                    const totalH_rot = openHeight * cols;
+            const footprintOptions = type === 6
+                ? [[1.5, 1], [1, 1.5]]
+                : (grids[numApertiPerLato] || []);
 
-                    if ((totalW <= sheet.width && totalH <= sheet.height) ||
-                        (totalW <= sheet.height && totalH <= sheet.width) ||
-                        (totalW_rot <= sheet.width && totalH_rot <= sheet.height) ||
-                        (totalW_rot <= sheet.height && totalH_rot <= sheet.width)) {
-                        possible = true;
-                        break;
-                    }
+            for (const [wFactor, hFactor] of footprintOptions) {
+                const totalW = openWidth * wFactor;
+                const totalH = openHeight * hFactor;
+                const totalW_rot = openWidth * hFactor;
+                const totalH_rot = openHeight * wFactor;
+
+                if ((totalW <= sheet.width && totalH <= sheet.height) ||
+                    (totalW <= sheet.height && totalH <= sheet.width) ||
+                    (totalW_rot <= sheet.width && totalH_rot <= sheet.height) ||
+                    (totalW_rot <= sheet.height && totalH_rot <= sheet.width)) {
+                    possible = true;
+                    break;
                 }
             }
 
@@ -968,7 +982,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return gram >= 70 && gram <= 115;
         } else if (sigType === 16) {
             return gram >= 130 && gram <= 150;
-        } else if (sigType === 4 || sigType === 8) {
+        } else if (sigType === 4 || sigType === 6 || sigType === 8) {
             return gram >= 170;
         }
         return true;
@@ -984,9 +998,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (gram < 130 || gram > 150) {
                 return 'Grammatura consigliata per 16°: 130-150g';
             }
-        } else if (sigType === 4 || sigType === 8) {
+        } else if (sigType === 4 || sigType === 6 || sigType === 8) {
             if (gram < 170) {
-                return 'Grammatura consigliata per 8°/4°: 170g+';
+                return 'Grammatura consigliata per 8°/6°/4°: 170g+';
             }
         }
         return null;
@@ -1080,7 +1094,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const gramWarningHtml = gramWarning ? `<div class="sig-grammatura-warning">${gramWarning}</div>` : '';
 
             const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
-            const availableTypes = isQuadrotto ? [12, 24] : [4, 8, 16, 32];
+            const availableTypes = isQuadrotto ? [12, 24] : [4, 6, 8, 16, 32];
             
             let typeOptions = '';
             availableTypes.forEach(type => {
@@ -1883,7 +1897,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const isQuadrotto = orientamentoSelect && orientamentoSelect.value === 'quadrotto';
             const available = Array.from(availableSignatureTypes);
-            const defaultSizes = isQuadrotto ? [24, 12] : [32, 16, 8, 4];
+            const defaultSizes = isQuadrotto ? [24, 12] : [32, 16, 8, 6, 4];
             const sizes = available.length > 0 ? available.sort((a, b) => b - a) : defaultSizes;
 
             let remaining = totalPages;
