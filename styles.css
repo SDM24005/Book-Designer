@@ -954,10 +954,6 @@ body.tecnica-digitale .optgroup-offset {
         padding: 0 20px 12px 20px;
     }
 
-    .container {
-        margin-top: 120px; /* Spazio per header + tab bar fissi */
-    }
-
     .mobile-view-tabs {
         display: flex;
         width: 100%;
@@ -982,6 +978,11 @@ body.tecnica-digitale .optgroup-offset {
         flex-direction: column;
         height: auto;
         overflow: visible;
+        padding-top: 120px; /* Spazio per header + tab bar fissi */
+    }
+
+    .data-panel {
+        padding-top: 0;
     }
     
     .preview-section {
