@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const mobileTabDataBtn = document.getElementById('mobile-tab-data');
     const mobileTabImpositionBtn = document.getElementById('mobile-tab-imposition');
     const mobileTab3DBtn = document.getElementById('mobile-tab-3d');
+    const headerEl = document.querySelector('header');
     const previewSection = document.querySelector('.preview-section');
     const dataSection = document.querySelector('.data-section');
     const preview3D = document.getElementById('preview3D');
@@ -272,6 +273,18 @@ document.addEventListener('DOMContentLoaded', function() {
         return window.matchMedia('(max-width: 768px)').matches;
     }
 
+    function updateMobileHeaderOffset() {
+        if (!headerEl) {
+            return;
+        }
+        if (isMobileView()) {
+            const offset = headerEl.offsetHeight;
+            document.documentElement.style.setProperty('--mobile-header-offset', `${offset}px`);
+            return;
+        }
+        document.documentElement.style.removeProperty('--mobile-header-offset');
+    }
+
     function setPreviewView(view) {
         currentView = view;
         if (currentView === 'imposition') {
@@ -352,8 +365,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isMobileView()) {
         setMobileTab('data');
     }
+    updateMobileHeaderOffset();
 
     window.addEventListener('resize', () => {
+        updateMobileHeaderOffset();
         if (isMobileView()) {
             if (
                 !document.body.classList.contains('mobile-view-data') &&
@@ -366,6 +381,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         document.body.classList.remove('mobile-view-data', 'mobile-view-imposition', 'mobile-view-3d');
     });
+
+    window.addEventListener('load', updateMobileHeaderOffset);
     let availableSignatureTypes = new Set();
     const PAPER_THICKNESS = {
         patinata_lucida: {
